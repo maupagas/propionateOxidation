@@ -18,7 +18,7 @@ T_Kelvin = 273.15;   %For temperature to Celsius
 Rth = 8.314e-3;      %For conversions of H2 to Pa
 DG_h2 = (Param.H0fM(St.id.H2) + (Param.refComb(7) / 298.15)*(Param.G0fM(St.id.H2) - Param.H0fM(St.id.H2)));   %Watch out when this is calculated for ALL POSSIBLE COMBINATIONS
 DG_ATP = abs(Param.refComb(1));
-fontSize = 24;
+fontSize = 20;
 
 %% Label for Net Proton Translocation Axis
 deltaPlot = 0;
