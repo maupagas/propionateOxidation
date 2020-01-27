@@ -1,275 +1,9 @@
-% clearvars -except PrintResults St Reac Results idLoop Param
-
-% Need to explain CLEARLY still what is going on in this script. Consider
-% also split into two scripts # MPG: 16/9/19
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%  DATA COLLECTION/GENERATION   %%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%% 1. DEFINE PATHWAY TO PLOT THE RESULTS OBTAINED
-refPoint = Param.refComb;
-nPrevReac = 0;    %In case this plot is combined to another one
-
-%%Obtain the pathway for the highest ATP Yield (Alternative, define a pathway to plot)
-numPathways = length(Reac.Pathway);
-maxNetATP   = zeros(numPathways, 1);
-
-%Collect highest ATP Yield for EACH pathway
-for i = 1:numPathways
-    reacPath = Reac.Pathway(i);
-    if isfield(PrintResults.FeasComb, reacPath)
-        maxNetATP(i) = max(PrintResults.FeasComb.(char(reacPath)).netATPV);
-    else
-        maxNetATP(i) = -10;
-    end
-end
-
-%Identify the pathway with the maximum ATP yield to plot it 
-idMaxATP       = find(maxNetATP == max(maxNetATP));
-reacPathMaxATP = Reac.Pathway(idMaxATP(1));   %First pathway with largest ATP yield
-reacPathPlot   = reacPathMaxATP;                %Pathway to plot
-
-%% 2. FILTER BY REFERENCE VALUE
-
-%%Select a variable to sort results from
-% varToSort = 'H2';
-%Labels and Inputs results to plot Table ,
-InputParNames = St.combinationListNames;
-varToSort     = InputParNames(5);
-colSort       = find(strcmp(St.combinationListNames, varToSort));
-
-%Prepare text for legend
-outputVarNames  = {'\DeltaG_{ATP}', 'Ratio H^+ / ATP', '[CoA-SH]', 'pH_{in}', 'P_{H2}', '[CO_2]_{Diss}',   'T', 'pH_{out}'};
-unitsVarLabel   = {'kJ/mol'       ,                '',       'mM',        '',     'Pa',            'mM', '^oC',         ''};
-outputVarLegend = outputVarNames(colSort);
-unitsVar        = unitsVarLabel(colSort); 
-
-%Collect variables to be sorted by an input or net ATP
-Inputs           = PrintResults.FeasComb.(char(reacPathPlot)).Inputs;
-netATPV          = PrintResults.FeasComb.(char(reacPathPlot)).netATPV;
-ConcM            = PrintResults.FeasComb.(char(reacPathPlot)).ConcV;       
-protTranslocComb = PrintResults.FeasComb.(char(reacPathPlot)).ProtTranslocComb;
-eC_Ratios_Res    = PrintResults.FeasComb.(char(reacPathPlot)).eC_Ratios_Res;
-DGrV             = PrintResults.FeasComb.(char(reacPathPlot)).DGrV;
-
-%Set the reference vector
-refValsV = Param.refComb(:,[1:colSort-1, colSort+1:end]);   
-%Find all the lines from the feasible reactions that have the same equal parameters except the selected variable to be changed
-idRefVals = find(all(refValsV == Inputs(:,[1:colSort-1, colSort+1:end]),2)); 
-%Filter the results by the reference variables for inputs and net ATP
-Inputs_RefVals           = Inputs(idRefVals,:);            
-netATP_RefVals           = netATPV(idRefVals,:);
-ConcM_RefVals            = ConcM(idRefVals,:); 
-eC_Ratios_RefVals        = eC_Ratios_Res(idRefVals,:);
-protTranslocComb_RefVals = protTranslocComb(idRefVals,:);
-DGrV_RefVals             = DGrV(idRefVals,:);
-
-%Collect lengths of each of the variables
-length_Inputs           = length(refPoint);
-length_ConcM            = length(St.StM);
-length_protTranslocComb = length(protTranslocComb_RefVals(1,:));
-length_eC               = length(eC_Ratios_RefVals(1,:));
-length_DGrV             = length(DGrV_RefVals(1,:));
-
-%Combine all the results to be sorted
-ResultsToSort = [Inputs_RefVals, ConcM_RefVals, eC_Ratios_RefVals, protTranslocComb_RefVals, DGrV_RefVals, netATP_RefVals];
-
-%% Sort Results
-sorting = 'refVals';
-
-if strcmp(sorting, 'refVals')   
-        sortedResults      = sortrows(ResultsToSort, colSort, 'ascend');
-        %Trim sortedResults into their own variables
-        InputsSorted       = sortedResults(:,1:length_Inputs);
-        ConcM_Sorted       = sortedResults(:,length_Inputs+1:length_Inputs+length_ConcM);
-        eC_Ratios_Sorted   = sortedResults(:,length_Inputs+length_ConcM+1:length_Inputs+length_ConcM+length_eC);  %TO CORRECT STILL
-        protTranslocSorted = sortedResults(:,length_Inputs+length_ConcM+length_eC+1:length_Inputs+length_ConcM+length_eC+length_protTranslocComb);
-        DGrV_Sorted        = sortedResults(:,length_Inputs+length_ConcM+length_eC+length_protTranslocComb+1:end-1);
-        netATPSorted       = sortedResults(:,end);
-end
-
-%Identify each singular value used to sort each variable
-valsSorted = unique(InputsSorted(:,colSort));
-% valsH2 = sort(valsH2, 'descend');
-idValsSorted = zeros(length(valsSorted),1);
-for k = 1:length(valsSorted)
-    idValsSorted(k) = find(InputsSorted(:,colSort) == valsSorted(k), 1);
-end
-
-
-%% Define the number of results to be plotted
-idPosValsSorted  = idValsSorted(netATPSorted(idValsSorted) >0);  %Plot only positive net ATPs
-numRes = length(idPosValsSorted);
-numLoops  = idLoop.(char(reacPathPlot)).numLoops; 
-
-%% Parameters for units conversion units
-Cels2Kelv = 273.15;    DG_H2 = 18.3;
-
-%% PATHWAY DATA
-plotSt = strcmp(St.StPlot, 'p');  %Only the metabolites labelled as 'p' are plotted
-
-%Remove all metabolites that do not participate in any reaction
-stoM   = Reac.(char(reacPathPlot)).stoM_ord;
-rows0  = find(all(stoM==0,2)); % all zeros
-plotSt(rows0) = []; %Delete all the rows that are zero
-
-% Collect concentration of metabolites of the selected results
-ConcM_Res = ConcM_Sorted(idPosValsSorted,:);   
-StNames   = St.StNames;
-
-%Number of reactions that are not eB nor eC reoxidations
-numRc_eB = sum(strcmp(Reac.(char(reacPathPlot)).Labels_ord, 'eB'));
-numRc_eC = sum(strcmp(Reac.(char(reacPathPlot)).Labels_ord, 'eC'));
-RcLength = length(Reac.(char(reacPathPlot)).Names_ord);
-nPlotRcNames = RcLength - numRc_eB - numRc_eC;
-
-%Collect  Names for XTicks
-reacNames =  Reac.(char(reacPathPlot)).Names_ord(1:nPlotRcNames);
-barLineWidth = 1;
-
-%%% Find Abbreviated names for Reac Labels
-reacAbbrevNames = cell(size(Reac.NamesV));
-for i=1:length(Reac.NamesV)
-    reacAbbrevNames{i} = sprintf('R_{%d}',i+nPrevReac);
-end
-
-reacID = zeros(1,length(reacNames));
-for j = 1:length(reacNames)
-    reacID(j) = find(strcmp(reacNames(j), Reac.NamesV));
-end
-reacID = sort(reacID);
-reacPlotAbbrevNames = reacAbbrevNames(reacID);
-
-%Assign translocated protons (ALL OF THEM NEED TO BE SORTED PROPERLY*****)
-protTranslocV = protTranslocSorted(idPosValsSorted,:);
-DGrV          = DGrV_Sorted(idPosValsSorted,1:length(reacNames));
-DGrV_eC       = DGrV_Sorted(idPosValsSorted,length(reacNames)+1:end);
-n_ATPV        = Reac.(char(reacPathPlot)).n_ATP_ord; 
-r_H_ATP_pos   = strcmp(InputParNames, 'ratio_H_ATP');
-ratio_H_ATP   = refPoint(1,r_H_ATP_pos);
-
-protTranslocV = protTranslocV(:, 1:length(reacNames));
-n_ATPV        = n_ATPV(1:length(reacNames));
-
-if ~isempty(Param.eB_reac)
-    eB_carrier    = 'CoB-SH';  %Select between 'CoB-SH' or 'Fdred'
-else 
-    eB_carrier = '';
-end
-
-%Collect  Names for XTicks
-if numLoops > 0 
-    for i = 1:numLoops
-        loopName      = sprintf('Loop_%d', numLoops);
-        startLoop     = idLoop.(char(reacPathPlot)).(char(loopName)).Start;
-        endLoop       = idLoop.(char(reacPathPlot)).(char(loopName)).End;
-        reacNames     = [reacNames(1:endLoop), reacNames(startLoop), reacNames(endLoop+1:end)];
-        reacPlotAbbrevNames   = [reacPlotAbbrevNames(1:endLoop), reacPlotAbbrevNames(startLoop), reacPlotAbbrevNames(endLoop+1:end)];
-        DGrV          = [DGrV(:,1:endLoop),      DGrV(:,startLoop),      DGrV(:,endLoop+1:end)];
-        n_ATPV        = [n_ATPV(:,1:endLoop),    n_ATPV(:,startLoop),    n_ATPV(:,endLoop+1:end)];
-        protTranslocV = [protTranslocV(:,1:endLoop), protTranslocV(:,startLoop), protTranslocV(:,endLoop+1:end)];
-    end
-end
-posIndexes    = protTranslocV >= 0;
-
-
-%Trim to """"plottable""" results
-ConcM_Res(:,rows0) = [];
-plotConcV   = ConcM_Res(:,plotSt);
-StNames(rows0) = [];
-StNames = StNames(plotSt);
-reacNum = 1:length(reacNames);
-
-%THIS IS A TEMPORARY FIX
-id_Start_Plot = find(strcmp(StNames, 'Pro_out'));
-
-startNamePlot = StNames(id_Start_Plot);
-StNames(id_Start_Plot) = [];
-plotStNames = [startNamePlot; StNames];
-plotStNames = strrep(plotStNames, '_out', ' (out)');
-
-startConcPlot = plotConcV(:,id_Start_Plot);
-plotConcV(:,id_Start_Plot) = [];
-plotConcV = [startConcPlot, plotConcV]';
-
-%% eC REOXIDATION
-
-%Get ratios of electron carriers 
-eC_Ratios = eC_Ratios_Sorted(idPosValsSorted,:);
-
-%Get concentrations result vector 
-ConcM_Res = ConcM_Sorted(idPosValsSorted,:)';
-
-%Calculate ratio of electron bifurcation
-if ~isempty(eB_carrier)
-    switch eB_carrier
-        case 'CoB-SH'
-            eB_Ratios = ConcM_Res(St.id.CoB_SH,:) ./ ConcM_Res(St.id.CoM_S_S_CoB,:);
-            ratioNames = {'CoB-SH/CoM-S-S-CoB', 'F420_{ox}/F420_{red}'};
-        case 'Fdred'
-            eB_Ratios = ConcM_Res(St.id.Fdred,:) / ConcM_Res(St.id.Fdox,:);
-            ratioNames = {'Fd_{red}/Fd_{ox}', 'F420_{ox}/F420_{red}'};
-    end
-    plotRatios = [eB_Ratios', eC_Ratios];
-    reoxeCNames = Results.Combination_1.(char(reacPathPlot)).eC_ReoxNames;   %any combination would work 
-    reoxeCNames = strrep(reoxeCNames, '_reox', '_{reox}');
-    reacReoxAbbrevNames = {'e-Bifurc',char(reoxeCNames)};
-else
-    ratioNames = Results.Combination_1.(char(reacPathPlot)).eC_ReoxNames;
-    reacReoxAbbrevNames = strrep(ratioNames, '_reox', '_{reox}');
-    ratioNames = strrep(ratioNames, '_reox', '');
-    
-    eCarrierRatioLabel = cell(length(ratioNames),1);
-    eCarrierLabel = eCarrierRatioLabel;
-    for z = 1:length(Param.eCarriers)
-        
-        idReox_Labels = find(strcmp(Param.eCarriers(z), ratioNames));
-        if ~isempty(idReox_Labels)
-            %         reoxLabels(z) = strcat(Param.eCarriers(idReox_Labels),'/',Param.eC_Cons(idReox_Labels));
-            eCarrierLabel(idReox_Labels) = Param.eCarriers(z);
-            eCarrierRatioLabel(idReox_Labels) = strcat(Param.eCarriers(z),'/',Param.eC_Cons(z));
-        end
-    end
-    plotRatios = eC_Ratios;
-end
-   
-%Identify position of electron carrier and electron bifurcator
-id_eC_R = find(strcmp(Reac.(char(reacPathPlot)).Labels_ord, 'eC'));
-id_eB_R = find(strcmp(Reac.(char(reacPathPlot)).Labels_ord, 'eB'));
-
-%Number of protons translocated for electron carriers and 
-%for reaction with electron bifurcation
-protTransloc_eC = protTranslocSorted(idPosValsSorted, id_eC_R);
-protTransloc_eB = protTranslocSorted(idPosValsSorted, id_eB_R);
-plotHTransloc   = [protTransloc_eB, protTransloc_eC];
-
-%Names of reactions for XTickLabels
-reoxReacNames = [Reac.(char(reacPathPlot)).Names_ord(id_eB_R), Reac.(char(reacPathPlot)).Names_ord(id_eC_R)];
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%% PLOT STARTS HERE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %PLOT DEFINITIONS
-FontSize = 24;                  FontLegend = 20;
+FontSize = 14;                  FontLegend = 12;
 LabelRotation = 30;
 deltaProt = 1;                      deltaDG = 5;  %# num of proton translocated per grid
 minConc = log10(Param.Min_Conc);    maxConc = log10(Param.Max_Conc);
@@ -306,35 +40,35 @@ else
 end
 
 %Prepare strings to be printed in table and in legend
-colRatio = find(strcmp(InputParNames,'Ratio_H_ATP'));
-ResData = [InputsSorted(idPosValsSorted,:), netATPSorted(idPosValsSorted,:)];
+ colRatio = find(strcmp(InputParNames,'ratio_H_ATP'));
+    ResData = [InputsSorted(idPosValsSorted,:), netATPSorted(idPosValsSorted,:)];
     
-%Modify strings in ResData (**************TO EVALUATE)
-numData = numel(ResData);
-strData = cell(size(ResData));
-%Re-structure dataLabels
-for i = 1:length(ResData(:,1))
-    for j = 1:length(ResData(1,:))
-        if abs(ResData(i,j)) >= 1
-            if mod(ResData(i,j), 1) == 0 && j ~= colRatio
-                strData{i,j} = sprintf('%.0f', ResData(i,j));
-            elseif j == colRatio
-                strData{i,j} = char(rationalTickLabels(ResData(i,j),3,0));
-            else
+    %Modify strings in ResData (**************TO EVALUATE)
+    numData = numel(ResData);
+    strData = cell(size(ResData));
+    %Re-structure dataLabels
+    for i = 1:length(ResData(:,1))
+        for j = 1:length(ResData(1,:))
+            if abs(ResData(i,j)) >= 1
+                if mod(ResData(i,j), 1) == 0 && j ~= colRatio
+                    strData{i,j} = sprintf('%.0f', ResData(i,j));
+                elseif j == colRatio
+                    strData{i,j} = char(rationalTickLabels(ResData(i,j),3,0));
+                else
+                    strData{i,j} = sprintf('%.2f', ResData(i,j));
+                end
+            elseif ResData(i,j)<1 && ResData(i,j)>=0.1
                 strData{i,j} = sprintf('%.2f', ResData(i,j));
+            elseif ResData(i,j)<0.1 && ResData(i,j)>=0.001
+                strData{i,j} = sprintf('%.0f', ResData(i,j) * 1000);
+            elseif ResData(i,j)<0.001 && ResData(i,j)>=1e-6
+                strData{i,j} = sprintf('%.3f', ResData(i,j) * 1000);
+            elseif ResData(i,j)<1e-6 && ResData(i,j)>=0
+                P_H2 = ResData(i,j) /(exp(-DG_H2/(Param.Rth * (Cels2Kelv +35)))) * 1e5;    %Pa
+                strData{i,j} = sprintf('%.2f', P_H2);
             end
-        elseif ResData(i,j)<1 && ResData(i,j)>=0.1
-            strData{i,j} = sprintf('%.2f', ResData(i,j));
-        elseif ResData(i,j)<0.1 && ResData(i,j)>=0.001
-            strData{i,j} = sprintf('%.0f', ResData(i,j) * 1000);
-        elseif ResData(i,j)<0.001 && ResData(i,j)>=1e-6
-            strData{i,j} = sprintf('%.3f', ResData(i,j) * 1000);
-        elseif ResData(i,j)<1e-6 && ResData(i,j)>=0
-            P_H2 = ResData(i,j) /(exp(-DG_H2/(Param.Rth * (Cels2Kelv +35)))) * 1e5;    %Pa
-            strData{i,j} = sprintf('%.2f', P_H2);
         end
     end
-end
 
 
 %Create legend labels
@@ -348,9 +82,9 @@ for i = 1:length(idPosValsSorted)
     rnamesLegend{i} = sprintf('%s\n%s', char(rnamesLegend1), char(rnamesLegend2));
 end
 
+    
 
-
-%Opens figure in Full Screen
+%Opens figure in Full Screen 
 f = figure('units','normalized','outerposition',[0 0 1 1]);
 
 %% PLOT DIMENSIONS: Main subplots in normalized units(Pathway and e-Carriers)
@@ -498,7 +232,7 @@ b1 = bar(protTranslocV' .* (posIndexes' == 1), 'FaceColor', posColor, 'BarWidth'
 hold on
 %Plots reactions that need to be pumped in
 b2 = bar(protTranslocV' .* (posIndexes' == 0), 'FaceColor', negColor, 'BarWidth', barWidth);
-bATP = bar(n_ATPV * Param.refComb(colRatio), 'FaceColor', ATPColor, 'BarWidth', 0.5);
+bATP = bar(n_ATPV * ratio_H_ATP, 'FaceColor', ATPColor, 'BarWidth', 0.5);
 
 % hL_Energy = legend([b1(1),b2(1),bATP(1)],'H^+_{out}', 'H^+_{in}', 'ATP', 'Location', 'SouthEast','Orientation', 'Horizontal','box','off','FontSize',FontLegend);
 %Set Transparency for bars
@@ -541,8 +275,7 @@ axProtons.XTickLabelRotation = LabelRotation;
 
 %Draw next axis
 axProtonspos = axProtons.Position;
-axRatios = axes('Position', axProtonspos, 'XAxisLocation','bottom','YAxisLocation','right',...
-    'Color','none');
+axRatios = axes('Position', axProtonspos, 'XAxisLocation', 'bottom', 'YAxisLocation', 'right', 'Color', 'none');
 hold on
 
 %Plot Ratios
@@ -665,8 +398,8 @@ if reacLabelTicks == 0
 %     axDG.XTick = '';
     axProtRc.XTick = '';
 else
-    ax2.TickLength = axConc.TickLength;
-    axDG.TickLength = axConc.TickLength;
+    ax2.TickLength      = axConc.TickLength;
+    axDG.TickLength     = axConc.TickLength;
     axProtRc.TickLength = axConc.TickLength;
 end
 
@@ -709,5 +442,3 @@ for i = 1:numRes
   b5(i).LineWidth = barLineWidth; 
 
 end
-
-
