@@ -10,7 +10,7 @@
 %Clear  and load all data
 clear all
 % load ResultsPathwayEvaluation.mat
-load SimResults200scn.mat
+load 200127_ProOxidResults.mat
 
 %% 1. DEFINE PATHWAY TO PLOT THE RESULTS OBTAINED
 refPoint = Param.refComb;
@@ -44,10 +44,10 @@ for i=1:length(Reac.Pathway)
     
     if isfield(PrintResults.FeasComb, reacPathPlot)
         %%Select a variable to sort results from
-        % varToSort = 'H2';
+        varToSort = 'Ratio_H_ATP';
         %Labels and Inputs results to plot Table ,
         InputParNames = St.combinationListNames;
-        varToSort     = InputParNames(1);
+%         varToSort     = InputParNames(1);
         colSort       = find(strcmp(St.combinationListNames, varToSort));
         
         %Prepare text for legend
@@ -148,7 +148,7 @@ for i=1:length(Reac.Pathway)
         %Level Phosphorylation
         protTranslocReac = protTranslocSorted(:,1:length(reacNames));                   %Proton translocation for the pathway reactions
         protTransloc_eC  = protTranslocSorted(:,length(reacNames)+1:end);               %Proton translocation for the electron carrier reoxidations (not ordered yet with the names)
-        ATP_SLP_V           = Reac.(char(reacPathPlot)).n_ATP_ord(1:length(reacNames));    %ATP at substrate level phosphorylation reactions
+        ATP_SLP_V        = Reac.(char(reacPathPlot)).n_ATP_ord(1:length(reacNames));    %ATP at substrate level phosphorylation reactions
                 
         %Arrange the values for Gibbs Free Energies
         DGrM_Reac          = DGrM_Sorted(:,1:length(reacNames));
@@ -280,7 +280,7 @@ for i=1:length(Reac.Pathway)
         plotProtTransloc_eC = protTransloc_eC(:,reoxReacID);
         plotDGrM_eC         = DGrM_eC(:,reoxReacID);
                   
-        %Collecting Results in Structure
+        %Collecting Results in Structure (USE SORTED VALUES!!!!)
         plotResults.(char(reacPathPlot)).InputsSorted         = InputsSorted;      
         plotResults.(char(reacPathPlot)).netATPSorted         = netATPSorted;      
 
@@ -304,3 +304,4 @@ end
 
 clearvars -except Reac Param idLoop St Results PrintResults Combination plotResults
 
+save plotResultsGUI.mat
