@@ -7,7 +7,7 @@ function [constConcM, varConcM, posConcV, idCalcReax, numReac, solvePathwayID] =
 
     %Identifies the components that participate in the reaction
     Conc2Change = (stoM ~= 0);
-    Subs_id = (stoM == -1); %Identify substrates
+    Subs_id = (stoM < eps * 1000); %Identify substrates, reactions with stoichometries lower than 0 
     % Conc2Change = Conc2Change .* (Subs_id == 0);      % Keeps the concentration of the substrate also constant
     Conc2Change = bsxfun(@times,Conc2Change, (Subs_id == 0));      % Keeps the concentration of the substrate also constant
     Conc2Change(id_H2:end,:) = 0;                    % Keeps the concentrations of carriers, ATP, Pi, and CO2 as constant (for now)
@@ -45,8 +45,8 @@ function [constConcM, varConcM, posConcV, idCalcReax, numReac, solvePathwayID] =
     %electron bifurcation
     if isempty(idCalcReax)
         solvePathwayID = 0;
-    elseif ~isempty(idCalcReax) && isempty(id_eB),
+    elseif ~isempty(idCalcReax) && isempty(id_eB)
         solvePathwayID = 1;
-    elseif ~isempty(idCalcReax) && ~isempty(id_eB),
+    elseif ~isempty(idCalcReax) && ~isempty(id_eB)
         solvePathwayID = 2;
     end

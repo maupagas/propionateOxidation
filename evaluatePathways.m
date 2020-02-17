@@ -15,7 +15,7 @@
 % 
 %Number of reactions to evaluate (To evaluate so far only the P1's (Reactions that do not contain any loop)
 % firstPath  = 'P1a';
-% lastPath   = 'P6b';
+% lastPath   = 'P1b';
 firstPath  = Reac.Pathway(1);
 lastPath   = Reac.Pathway(end);
 Param.firstPath2Eval = find(strcmp(char(firstPath), Reac.Pathway));
@@ -82,6 +82,18 @@ for k = 1:length(St.combinationList(:,1)), St.combinationNames{k} = sprintf('%s_
 StM_0 = St.StM;
 combinationListNames = St.combinationNames;
 
+%Identifier for each one of the variables for the sensitivity analysis
+id_DGATP = strcmp('DG_ATP', Param.combNames);
+id_Ratio = strcmp('Ratio_H_ATP', Param.combNames);
+id_CoASH = strcmp('CoA_SH', Param.combNames);
+id_pHin  = strcmp('pH_in', Param.combNames);
+
+id_H2    = strcmp('H2',     Param.combNames);
+id_CO2   = strcmp('CO2',    Param.combNames);
+id_T     = strcmp('T',      Param.combNames);
+id_pHout = strcmp('pH_out', Param.combNames);
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%% UNTIL HERE THIS SHOULD GO IN ANOTHER FUNCTION %%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -94,10 +106,10 @@ for m = 1:length(combValues(:,1))
     
     %*************************************************************************
     %UPDATE COMBINATION VALUES: THIS HAS TO BE DEFINED BY HAND
-    Param.DG_ATP = combValues(m,1);          concH2  = combValues(m,5);      
-    ratio_H_ATP  = combValues(m,2);          concCO2 = combValues(m,6); 
-    concCoA      = combValues(m,3);          T       = combValues(m,7); 
-    pH_in        = combValues(m,4);          pH_out  = combValues(m,8);
+    Param.DG_ATP = combValues(m, id_DGATP);          concH2  = combValues(m, id_H2);      
+    ratio_H_ATP  = combValues(m, id_Ratio);          concCO2 = combValues(m, id_CO2); 
+    concCoA      = combValues(m, id_CoASH);          T       = combValues(m, id_T); 
+    pH_in        = combValues(m, id_pHin);           pH_out  = combValues(m, id_pHout);
     
     %Intracellular parameters
     Param.DG_Prot        = Param.DG_ATP / ratio_H_ATP;
