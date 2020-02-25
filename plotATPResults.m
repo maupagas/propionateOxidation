@@ -13,6 +13,11 @@ sensTitle = 'Sensitivity analysis';
 % Variables of the name to plot
 outputVarNames = {'\DeltaG_{ATP}  (kJ/mol)', 'Ratio H^+ / ATP', '[CoA-SH]  (mM)', 'pH_{in}', 'P_{H2} (Pa)', '[CO_2]_{Dissolved} (mM)', 'Temperature (^oC)', 'pH_{out}'};
 
+%Write the output yield units (mol ATP/mol eD)
+eDvar = St.StNames(St.eD == 1);
+eDvar = strrep(eDvar, '_out', '^-');
+unitsYAxis = sprintf('(%s %s)', 'mol ATP/mol', char(eDvar));
+
 % Values used to convert units
 T_Kelvin = 273.15;   %For temperature to Celsius
 Rth = 8.314e-3;      %For conversions of H2 to Pa
@@ -23,9 +28,11 @@ fontSize = 24;
 %% Label for Net Proton Translocation Axis
 deltaPlot = 0;
 minYval = 0;
-maxYval =  3 + 1/3;
 minYPlotVal = minYval/3 - deltaPlot;
-maxYPlotVal = (DG_ATP+10)/DG_ATP + deltaPlot;
+
+maxYval =  Output.maxATP + 1/3;
+maxYPlotVal = -Output.maxDGr/DG_ATP + deltaPlot;
+
 yticknumvals = (minYval:1/3:maxYval);
 denomTicks = 3;
 denomRatio = 3;
@@ -45,8 +52,7 @@ for i = 1:length(Param.combNames)
         
         xTickLabel = Output.varValues.(char(outputVar));
         
-        %Convert labels to desired axis values (e.g. H2 in ppm, T in C,
-        %etc)
+        %Convert labels to desired axis values (e.g. H2 in ppm, T in C, etc)
         if strcmp(outputVar,'H2') == 1
             P_H2 = Output.varValues.H2 /(exp(-DG_h2/(Rth * (T_Kelvin +35)))) * 1e5;  %Pa
             P_H2_Label = cell(1, length(P_H2));
@@ -121,9 +127,7 @@ for i = 1:length(Param.combNames)
         if subplotNum == 1
             Position = [xPos, yPos, plotWidth, plotHeight];
             %         title(sensTitle, 'Position', [2.05 0.05 0]);
-            ylabel({'Y_{ATP}','(mol ATP/mol Pro^-)'})
-%             hleg = columnlegend(9, reacPathway);
-%             hleg.Position = [0.28 -0.4841 0.450 0.5883];
+            ylabel({'Y_{ATP}',unitsYAxis})
             hL = legend(reacPath,'NumColumns',9, 'EdgeColor', 'none');
             hL.Position = [0.3 0.05 0.45 0.05];
         elseif subplotNum == 2
@@ -131,7 +135,7 @@ for i = 1:length(Param.combNames)
             set(gca,'YTickLabel',[]);
         elseif subplotNum == 3
             Position = [xPos, yPos-plotHeight-gapHeight, plotWidth, plotHeight];
-            ylabel({'Y_{ATP}','(mol ATP/mol Pro^-)'})
+            ylabel({'Y_{ATP}',unitsYAxis})
         else
             Position = [xPos+plotWidth+gapWidth, yPos-plotHeight-gapHeight, plotWidth, plotHeight];
             set(gca,'YTickLabel',[]);
@@ -140,7 +144,8 @@ for i = 1:length(Param.combNames)
         set(gca, 'Position',Position);
         textLabel = strcat(char(96+i),')');
         hText = text(0.03, 0.93 , textLabel, 'Units', 'normalized', 'FontSize', fontSize); 
-%         hText.Position = [0.03 0.93 0];
+%         hText.Position = [0.03 0.93 0];   % Defined position of the legend by hand
+
         %**************** POSITIONS DEFINITION ENDS HERE *******************
 
         %Collect values of DG

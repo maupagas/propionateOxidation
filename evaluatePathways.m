@@ -22,14 +22,12 @@ Param.firstPath2Eval = find(strcmp(char(firstPath), Reac.Pathway));
 Param.lastPath2Eval  = find(strcmp(char(lastPath),  Reac.Pathway));
 loopFlag = 0;       % Flag not to allow concentrations to go over the maximum limit (Only used in loop calculations)
 
-%pKa's (to be adjusted with temperature) 
-pKa_CO2 = 6.31; pKa_HCO3 = 10.26;
+%pKa's (to: 1) be adjusted with temperature 2) Read directly from Excel) 
+pKa_CO2 = St.pKa1V(St.id.CO2);          pKa_HCO3 = St.pKa1V(St.id.CO2);
+pka_Bu  = St.pKa1V(St.id.Bu_out);       pka_Ac   = St.pKa1V(St.id.Ac_out);
 
 %% DEFINE DIFFERENT SCENARIOS TO EVALUATE THE PATHWAYS %%%%%%%%%%%%
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%% CREATE A NEW FUNCTION TO LOAD THIS #MPG: 12/9/19 %%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Select the type of analysis to perform: 
 
 %(1) Sensitivity 
@@ -63,19 +61,27 @@ switch combinationAnalysis
         
 end
 
-        %DEBUGGING MODE (If it is >0, run the number of defined
-        %combinations. If -1, define the custom condition to be evaluated
-        numComb = 0;
-        
-        if numComb > 0
-            combValues = combValues(1:numComb,:);
-        elseif numComb == -1
-            combValues = [-50	3.333333333  0.001	7	3.5E-9	0.01	308.15	7.465];
-        end
-        
-        St.combinationList      = combValues;
-        St.combinationListNames = combNames;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %DEBUGGING MODE (If it is >0, run the number of defined                                      %
+            %combinations. If -1, define the custom condition to be evaluated                            %
+            numComb = 0;                                                                                 %
+                                                                                                         %
+            if numComb > 0                                                                               %
+                combValues = combValues(1:numComb,:);                                                    %
+            elseif numComb == -1                                                                         %
+                combValues = [-50	3.333333333  0.001	7	3.5E-9	0.01	308.15	7.465];              %
+            end                                                                                          %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            
+St.combinationList      = combValues;
+St.combinationListNames = combNames;
 
+%Store concentration total of inputs, and pKa
+Bu_Ka = 10^-(St.pKa1V(St.id.Bu_out));
+Ac_Ka = 10^-(St.pKa1V(St.id.Ac_out));
+
+concBuT = St.StM(St.id.Bu_out) * (1 + St.StM(St.id.Hout) / Bu_Ka);
+concAcT = St.StM(St.id.Ac_out) * (1 + St.StM(St.id.Hout) / Ac_Ka);
 
 %Store list of Combination names
 for k = 1:length(St.combinationList(:,1)), St.combinationNames{k} = sprintf('%s_%d','Combination',k); end
@@ -122,6 +128,19 @@ for m = 1:length(combValues(:,1))
     St.StM(St.id.CO2)  = concCO2;
     Param.T    = T; 
     St.StM(St.id.Hout) = 10^-pH_out;
+    
+    %If the pH is different than the reference value, please update the
+    %concentration of the metabolites  %%%% NEED TO REVISE AS
+%     flag_pH = 1;
+%     if flag_pH == 1 && pH_out ~= Param.refComb(id_pHout)    
+%         concBu_out = concBuT * Bu_Ka / (10^-pH_out + Bu_Ka);
+%         concAc_out = concAcT * Ac_Ka / (10^-pH_out + Ac_Ka);
+%         
+%         St.StM(St.id.Bu_out) = concBu_out;
+%         St.StM(St.id.Ac_out) = concAc_out;
+%         
+%         %Recalculate metabolites concentrations
+%     end
 
     %**************************************************************************
 

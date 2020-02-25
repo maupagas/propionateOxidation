@@ -30,10 +30,11 @@ u_i = DG0ft_const + Param.Rth * Param.T * log(StM_const);
 %change. Also adds the equivalent Gibbs of the translocated protons
 sum_u_i = sum(u_i .* stoV_const) + ObjDG - Param.DG_ATP * n_ATP;
 
-%Calculates the Product concentration for a DG = 0
-prodStoich = sum(stoV .* varConcV); 
+
 % prodStoich = stoV(varConcV==1) ;        % Check which one of the two is faster
 %     prodConc = exp(((-sum_u_i - DG0ft(varConcV) - chrV(varConcV)  * F .* EV(varConcV)) / (Rth * T )));
+%Calculates the Product concentration for a DG = 0
+prodStoich = sum(stoV .* varConcV); 
 prodConc = exp(((-sum_u_i/prodStoich - DG0ft_var) / (Param.Rth * Param.T )));
 
 %Do not allow Product Concentration to go over maximum feasible

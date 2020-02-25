@@ -18,10 +18,10 @@ turquoisecolormap = [ 72 157 184; 138 193 210]/255;
 %Oranges
 orangecolormap    = [255 153   0; 255 189  91]/255; 
 
-%**** More colors can be added ***********************
+%********** EDIT COLORS UNTIL HERE *******************
+%********* More colors can be added ******************
 
 
 %Combine all colors previously defined
 colorMap = [redcolormap; bluecolormap; greencolormap; purplecolormap; turquoisecolormap; orangecolormap];
 
-%********** EDIT COLORS UNTIL HERE *******************%

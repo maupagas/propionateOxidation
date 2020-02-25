@@ -1,18 +1,25 @@
 %Script to write the values of the DG of the reactions and the activities
 %required to find the optimum to run the reactions forward (if possible)
-xlsxFile ='PropionateResults.xlsx';
+
+%It only can print One combination at a time, otherwise, too many tabs
+%would be written
+
+%%%%%%%%%% EDITING OF FILE STARTS HERE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%Define Excel file to print and its path
+xlsxFile ='ButyrateResults.xlsx';
 file = strcat(pwd, '\', xlsxFile);
 
 printType = 'all';   %choose between 'all' or 'final'
-printCombName = 'Combination_18';  %Combination List Name
+printCombName = 'Combination_18';  %Select Combination List Name
 
-% headNameSheet = 'FeasEvalRes_';
-% targetPath =  'P6b';
-% lastPath2Print = find(strcmp(targetPath, Reac.Pathway));
+%%%%%%%%%% EDITING OF FILE ENDS HERE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%Write the last two missing headers for the excel sheet
 nameProtonTransloc = 'Net Proton Translocation';
 nameATP_Prod = 'Net ATP Produced';
 
-%Activates Excel server (I needed to add the file location with its full path)
+%Activates Excel server to print in multiple files
 Excel = actxserver ('Excel.Application');
 if ~exist(file,'file')
     ExcelWorkbook = Excel.workbooks.Add;
@@ -20,22 +27,15 @@ if ~exist(file,'file')
     ExcelWorkbook.Close(false);
 end
 invoke(Excel.Workbooks,'Open',file);
-% 
-% 
-% % Retrieve sheet names 
-% [~, sheetNames] = xlsfinfo(file);
-% % Clear the content of the sheets (from the second onwards)
-% cellfun(@(x) Excel.ActiveWorkBook.Sheets.Item(x).Cells.Clear, sheetNames(2:end));
 
 %Column to write DG of each reaction (Will write in IT6 first route from IT, AU, AV... and second in IT7, AU7... etc) 
 
 %Print results
 for i = Param.firstPath2Eval : Param.lastPath2Eval
     
+    %Writes in the sheet of the pathway to be printed
     nameSheet = Reac.Pathway(i);
     
-%     if isfield(PrintResults.FeasComb, (char(nameSheet)))
-
     %Print Reaction Names
     nCell_ReacNames    = 'B2';
     ncol_NetHTransloc  = xlscol(nCell_ReacNames) + length(Reac.(char(Reac.Pathway(i))).Names_ord);
@@ -45,10 +45,6 @@ for i = Param.firstPath2Eval : Param.lastPath2Eval
 
     numColConcNames = xlscol(nCell_ReacNamesDG) + length(Reac.(char(Reac.Pathway(i))).stoM_ord(1,:)) + 1;
     nCell_ConcNames = strcat(xlscol(numColConcNames), nCell_ReacNames(2)); 
- 
-%     if numColConcNames > 90, 
-%         colConcNames = strcat(char(64 + floor((numColConcNames - char('A'))/26)), char(65 + mod((numColConcNames - char('A')), 26)));
-%     end
          
     numColInputsNames     = numColConcNames + length(St.StM) + 1;
     nCell_InputsNames     = strcat(xlscol(numColInputsNames), nCell_ReacNames(2));
@@ -137,9 +133,7 @@ for i = Param.firstPath2Eval : Param.lastPath2Eval
         xlswrite1(xlsxFile, emptyStrings, nSheet, nCell_ReacNames);
 
         if isempty(print_ConcResults) == 0
-            
-
-            
+        
             %Write calculated Concentrations
             xlswrite1(xlsxFile, print_ConcResults, nSheet, nCell_Conc);
             xlswrite1(xlsxFile, St.StNames', nSheet, nCell_ConcNames);
@@ -171,24 +165,17 @@ for i = Param.firstPath2Eval : Param.lastPath2Eval
                        
             xlswrite1(xlsxFile, cellstr('DG_Prot'),  nSheet, nCell_DG_Prot_Label);
             xlswrite1(xlsxFile, print_DG_Prot,  nSheet, nCell_DG_Prot);
-
-            
+        
         end
-    
-%     end
 
 end
 
 
-% for j=1:length(Reac.Names),
-%     nCol_DG  = strcat('IT',num2str(j+5));
-% %Then run the new xlswrite1 function as many times as needed or in a loop (for example xlswrite1(File,data,location). Then run the following code to close the activex server:
-%     xlswrite1(File, Reac.(strcat('DGr',num2str(j))), nSheet, nCol_DG);
-% end
-
+%Saves excel datasheet to be printed and closes the XServer
 invoke(Excel.ActiveWorkbook,'Save');
 Excel.Quit
 Excel.delete 
 clear Excel
 
+%Clears all the variables except the interested ones
 clearvars -except Reac Param idLoop St Results PrintResults

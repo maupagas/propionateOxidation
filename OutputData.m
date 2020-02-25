@@ -1,6 +1,6 @@
 %Script to write the values of the DG of the reactions and the activities
 %required to find the optimum to run the reactions forward (if possible)
-xlsxFile ='PropionateResults.xlsx';
+xlsxFile ='ButyrateResults2.xlsx';
 file = strcat(pwd, '\', xlsxFile);
 headNameSheet = 'P4a';
 targetPath = 'P4a';

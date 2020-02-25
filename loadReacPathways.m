@@ -1,11 +1,8 @@
 %%0.- READING DATA FROM EXCEL
 %Import DG0f, chrV, activities (a_i)
-xlsxFile = 'PropionateOxidation.xlsx';
-nSheet   = 'ProDegPaths';
+xlsxFile = 'ButyrateOxidation.xlsx';
+nSheet   = 'BuOxidPaths';
 nRange = 'A1:DA100';
-% nCellSto     = 'A25:BD71';     % Includes all reaction labels all the way down to #ATP involved (and DG of reaction). From Transport in until "Full Stoichiometry"
-% nCellMassBal = 'CA26:CL67';    % From C label to -S-CoA label, adding all components involved
-% nCellThermo  = 'BW26:BY67';    % From DG label to So label, adding all components involved
 
 %% Load all the variable names and its values
 [Values,  Strings]   = xlsread(xlsxFile, nSheet, nRange, 'basic');
@@ -21,6 +18,7 @@ diffColValStr = length(Strings(1,:)) - length(Values(1,:));
 %Pathway Names
 Pathway = Strings(rowPathList:rowPathSelection - 2, colPathList+1);
 Path = Values(rowPathList:rowPathSelection - 2, (colPathList+2:colFullSto-1) - diffColValStr );   %Pathway Values      
+PathwayNames = Strings(rowPathList:rowPathSelection - 2, colFullSto);
 
 %% Mass Balance
 [rowC, colC]          = find(strcmp('C', Strings));
@@ -60,17 +58,33 @@ reacM        = Values(rowLabels+1 : rowProtTransloc-1, (colStoStart +1:colFullSt
 reacHeadings = Strings(rowLabels, colStoStart +1: colFullSto-1);
 reacLabels   = Strings(rowLabels - 1, colStoStart +1: colFullSto-1);
 
+
 protTranslocM = Values(rowProtTransloc:rowProtTransloc+1, (colStoStart +1:colFullSto-1)- diffColValStr); 
 n_ATPV        = Values(rowATP, (colStoStart +1:colFullSto-1)- diffColValStr);
 
+%Components Ka
+[~, col_Ka1]  = find(strcmp('pKaº1', Strings));
+[~, col_Ka2]  = find(strcmp('pKaº2', Strings));
 
-%Reaction names, concentrations and DG
+%Metabolite names, concentrations, charge, eD identification and pKa
 [~, col_StM]  = find(strncmp(Strings,'ai / P',2));
 [~, col_chrV] = find(strcmp(Strings,'Charge'),1);
 [~, col_StNames] = find(strcmp(Strings,'Abbrev. Name'),1);
-StNames = Strings(rowLabels+1:rowProtTransloc-1, col_StNames);  
-StM     = Values(rowLabels+1:rowProtTransloc-1, col_StM - diffColValStr);
-chrV    = Values(rowLabels+1:rowProtTransloc-1, col_chrV - diffColValStr);
+rngXValues = rowLabels+1:rowProtTransloc-1;
+
+StNames = Strings(rngXValues, col_StNames);  
+StM     = Values(rngXValues, col_StM - diffColValStr);
+chrV    = Values(rngXValues, col_chrV - diffColValStr);
+eD      = Values(rngXValues, colStoStart - diffColValStr);    %Identify electron donor of the reaction
+pKa1V    = Values(rngXValues, col_Ka1 - diffColValStr); 
+pKa2V    = Values(rngXValues, col_Ka2 - diffColValStr); 
+% Substitute NaN values by 0
+ka1V(isnan(pKa1V)) = 0;
+ka2V(isnan(pKa2V)) = 0;
+
+%Store in the structure of states
+St.eD = eD;    % Store electron donor of the reaction defined in the spreadsheet
+St.pKa1V = pKa1V;   St.pKa2V = pKa2V;
 
 %Identifies the phase of the components (IN or OUT of the cell) and the permeability of them to cross the cell membrane
 [~, col_compPhase]        = find(strcmp(Strings, 'Phase'));
@@ -115,10 +129,10 @@ end
 % col_StType = strcmp(Strings(2,:),'CompLabel');
 % col_StPlot = strcmp(Strings(2,:), 'StPlot');
 
-St.compPhase  = strcmp(Strings(rowLabels+1:rowProtTransloc-1, col_compPhase), 'IN');           %1 if it is IN and 0 if it is OUT
-St.compPermeability = strcmp(Strings(rowLabels+1:rowProtTransloc-1,col_compPermeability),  'Y');     %1 if it is PERMEABLE and 0 if it is NOT PERMEABLE
-St.StType = (Strings(rowLabels+1:rowProtTransloc-1, col_StType));                         %'m' for metabolite, 'eC' for electron Carrier, 'l' for loop component and 'r' for ratio-calculated component
-St.StPlot = (Strings(rowLabels+1:rowProtTransloc-1, col_StPlot));      %Select which variable to plot
+St.compPhase  = strcmp(Strings(rngXValues, col_compPhase), 'IN');           %1 if it is IN and 0 if it is OUT
+St.compPermeability = strcmp(Strings(rngXValues,col_compPermeability),  'Y');     %1 if it is PERMEABLE and 0 if it is NOT PERMEABLE
+St.StType = (Strings(rngXValues, col_StType));                         %'m' for metabolite, 'eC' for electron Carrier, 'l' for loop component and 'r' for ratio-calculated component
+St.StPlot = (Strings(rngXValues, col_StPlot));      %Select which variable to plot
 % Identify positions of the variables to close the stoichiometry later
 StNamesId = strrep(StNames,   '-', '_');      %Replaces the - by _ for the deprotonated components
 StNamesId = strrep(StNamesId, '+',  '');     %Removes the + to avoid errors in the structure
@@ -213,7 +227,7 @@ Reac.FullStoM = zeros(length(reacM(:,1)),length(Pathway));
 Reac.stoM_xlsx =  Values(rowLabels+1 : rowProtTransloc-1,colFullSto - diffColValStr);
 
 %Loads Reaction Pathway(Names) and Paths (Matrix with reactions orders)
-Reac.Pathway = Pathway;         Reac.Path = Path;
+Reac.Pathway = Pathway;         Reac.Path = Path;       Reac.PathwayNames = PathwayNames;
 %Collects all the headings of the reactions specified in Excel
 Reac.NamesV  = reacHeadings;
 Reac.LabelsV = reacLabels;
@@ -408,7 +422,6 @@ end
 %% 7.- Load Sensitivity Analysis Variables
 
 %% Reading the variables from the sheet from the excel
-xlsxFile = 'PropionateOxidation.xlsx';
 nSheet   = 'SensAnalysis';
 nRange = 'A1:DA100';
 

@@ -31,40 +31,15 @@ for k = 1:numPathways
     %ratio
 
     %Identify number of loops in the stoichiometryid
-    numLoops = sum(idLoops);
-%     loopsID   = find(strcmp(Reac.P1a.Labels_ord, 'Lc'));     %Loop calculation
-%     ratioRcID = (strcmp(Reac.P1a.Labels_ord, 'Cr'));     %Calculate ratio
-    
-%     numLoops = sum(loopsID);
-%     numRatioRc = sum(ratioRcID);
-%     
-    
+    numLoops = sum(idLoops); 
     ID.(char(reacPath)).numLoops   = numLoops;
-%     ID.(char(reacPath)).numRatioRc = numRatioRc;
-%     ID.(char(reacPath)).ratioRcID  = numRatioRc;
-
-
-    %% Ratio-based calculated reactions
-    
-    %Identify ratio species
-%     idRatiospc  = find(strcmp(St.StType, 'r'));
-%     for j = 1:length(idRatiospc),
-%         ratioName = sprintf('Ratio_%d',j);
-%         idRatioSub  = find(stoM(:,j) < 0); 
-%         idRatioProd = find(stoM(:,j) > 0);
-%         
-%          %Values
-%         ID.(char(reacPath)).(char(ratioName)).idRatioSub  = idRatioSub;
-%         ID.(char(reacPath)).(char(ratioName)).idRatioProd = idRatioProd;
-%     end
-%     
-    
+      
     %% Loops identifications
     startPointLoop = find(idLoops);
     LoopsNames = cell(numLoops, 1);
 
     %Identify start and end of each loop (for pathways that contain a loop)
-    if numLoops > 0,
+    if numLoops > 0
         for i = 1:numLoops
 
             LoopsNames{i} = sprintf('Loop_%d',i);
@@ -73,7 +48,7 @@ for k = 1:numPathways
             ID.(char(reacPath)).(char(LoopsNames{i})).Start = startLoop;
 
             %Find both substrates for the start of the loop
-            if idRatioRc(startLoop) == 1,
+            if idRatioRc(startLoop) == 1
                 endLoop = startLoop + 1;
                 ID.(char(reacPath)).(char(LoopsNames{i})).TypeLoop = 'ratio';
 
@@ -87,7 +62,7 @@ for k = 1:numPathways
     %             endLoop = endcolLoop + startLoop - 1;
 
 %                 endLoop = find(stoM(loopProds, :) == -1) - 1;
-                [~, loopProdCons] = find(stoM(loopProds,:) == -1);
+                [~, loopProdCons] = find(stoM(loopProds,:) < -eps);
                 endLoop = max(loopProdCons) -1;
 %                 endLoop = endLoop(endLoop > startLoop); 
             end

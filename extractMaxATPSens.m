@@ -8,6 +8,7 @@
 %to be extracted (the same as the sensitivity analysis) 
 var2Extract = Param.combNames;
 refPoint    = Param.refComb;
+maxATP_prev = 0; 
 
 %List of pathways to assess
 reacPathway = Reac.Pathway(Param.firstPath2Eval:Param.lastPath2Eval);
@@ -81,10 +82,25 @@ for m = 1:length(var2Extract)
         plotResults(k,:) = Output.Results.(char(varValuesNames(k))).max_ATP;
             
     end 
-    
+        
+        %Register maximum value of ATP
+        maxATP = max(max(plotResults,[],'all'), maxATP_prev);
         %The vector of results for the variable is stored under the Output structure
         Output.plotResults.(char(varResults)) = plotResults;
-
+        maxATP_prev = maxATP;
 end
+
+%Extract also the maximum value of the Gibbs free energies (To be
+%recalculated earlier)
+varDG = fieldnames(Output.DGr);
+DGrVarV = zeros(length(varDG),1);
+for i = 1:length(varDG)
+    DGrVarV(i) = Output.DGr.(char(varDG(i)));
+end
+
+%Store in the Outputs, maximum energy recovered as ATP and the maximum
+%catabolic energy
+Output.maxATP = maxATP;
+Output.maxDGr = min(DGrVarV);
 
 clearvars -except Reac Param idLoop St Results PrintResults Combination Output
