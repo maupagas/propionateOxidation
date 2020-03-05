@@ -64,12 +64,17 @@ while concCheck == 1 || DGCheck == 1 || ratioCheck == 0
             
             %If it is the first calculation, no new ratio is provided
             if ratioNew == 0
+                
+%                 %Calculates the Product concentration for a DG = 0
+%                 prodStoich = sum(stoV .* varConcV);
+%                 prodConc = exp(((-sum_u_i/prodStoich - DG0ft_var) / (Param.Rth * Param.T )));
+                
                 %Calculate product assuming a ratio (PREALLOCATE id_C1
                 u_i = DG0ft(nonC1V) + Rth * T * log(StM(nonC1V));
                 sum_u_i = sum(u_i .* stoV(nonC1V)) + ObjDG - DG_ATP * n_ATP_Loop;
                 
                 %Calculates the Product concentration (and the initial ratio) for a DG = 0
-                C1 = exp((-sum_u_i - DG0ft(id_C1)) / (Rth * T));
+                C1 = exp((-sum_u_i/stoV(id_C1) - DG0ft(id_C1)) / (Rth * T));
                 
                 %Define the minimum ratio (if no energy is dissipated)
                 ratio_min = Cn/C1;
@@ -314,7 +319,7 @@ if solutionFlag == 1
     
     %Calculates the Product concentration for a DG = 0
 %     Cout = exp(((-sum_u_i - DG0f(id_Cout) - chrV(id_Cout) * F .* EV(id_Cout)) / (Rth * T )));
-    Cout = exp(((-sum_u_i - DG0ft(id_Cout)) / (Rth * T )));
+    Cout = exp(((-sum_u_i/stoV(id_Cout) - DG0ft(id_Cout)) / (Rth * T )));
 
     if Cout > Max_Conc, Cout = Max_Conc; end
     StM(id_Cout) = Cout;

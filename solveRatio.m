@@ -8,12 +8,14 @@ function [ConcV, prodConc, posConc, ratiospc] = solveRatio(StM, stoV, n_ATP, con
     %Ratio species (Cn/C1)
     id_Cn = LoopData.id_Cn;
     id_C1 = LoopData.id_C1;
+    posConc = id_Cn;
 
     StM(id_Cn) = Param.Max_Conc;
     loopFlag = 2;  %Allows product to go over parameter max
+    varConcV = (constConcV == 0);
 
     %Calculate product concentration
-    [ConcV, prodConc, posConc] = calcProdConc(Param, StM, stoV, n_ATP, constConcV, numProtTransloc, loopFlag);            
+    [ConcV, prodConc] = calcProdConc(Param, StM, stoV, n_ATP, constConcV, varConcV, numProtTransloc, loopFlag);            
 
 %     if posConc == id_C1,
 %         sprintf('Product is correct');
