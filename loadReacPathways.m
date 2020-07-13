@@ -1,8 +1,19 @@
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% CODE DEVELOPED BY:
+% Mauricio Patón
+% Dep.Chemical Engineering
+% Khalifa University
+% PO Box 127788 Abu Dhabi
+% United Arab Emirates
+% mauricio.paton@ku.ac.ae
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 %%0.- READING DATA FROM EXCEL
 %Import DG0f, chrV, activities (a_i)
-xlsxFile = 'ButyrateOxidation.xlsx';
-nSheet   = 'BuOxidPaths';
-nRange = 'A1:DA100';
+xlsxFile = 'PropionateOxidationInclSmithella.xlsx';
+nSheet   = 'ProDegPath_FdSwap';
+% nSheet   = 'ProDegPath_fixed';
+nRange = 'A1:EA100';
 
 %% Load all the variable names and its values
 [Values,  Strings]   = xlsread(xlsxFile, nSheet, nRange, 'basic');
@@ -17,13 +28,13 @@ diffColValStr = length(Strings(1,:)) - length(Values(1,:));
 
 %Pathway Names
 Pathway = Strings(rowPathList:rowPathSelection - 2, colPathList+1);
-Path = Values(rowPathList:rowPathSelection - 2, (colPathList+2:colFullSto-1) - diffColValStr );   %Pathway Values      
+Path    = Values(rowPathList:rowPathSelection - 2, (colPathList+2:colFullSto-1) - diffColValStr );   %Pathway Values      
 PathwayNames = Strings(rowPathList:rowPathSelection - 2, colFullSto);
 
 %% Mass Balance
-[rowC, colC]          = find(strcmp('C', Strings));
-[rowMet, colMet]      = find(strcmp('Met', Strings));
-[lastRowSto, ~] = find(strcmp('Electron', Strings));
+[rowC, colC]     = find(strcmp('C', Strings));
+[rowMet, colMet] = find(strcmp('Met', Strings));
+[lastRowSto, ~]  = find(strcmp('Electron', Strings));
 
 massBalValues = Values(rowC + 1 : lastRowSto, (colC:colMet) - diffColValStr);
 massBalComp   = Strings(rowC, colC:colMet);
@@ -67,17 +78,17 @@ n_ATPV        = Values(rowATP, (colStoStart +1:colFullSto-1)- diffColValStr);
 [~, col_Ka2]  = find(strcmp('pKaº2', Strings));
 
 %Metabolite names, concentrations, charge, eD identification and pKa
-[~, col_StM]  = find(strncmp(Strings,'ai / P',2));
-[~, col_chrV] = find(strcmp(Strings,'Charge'),1);
+[~, col_StM]     = find(strncmp(Strings,'ai / P',2));
+[~, col_chrV]    = find(strcmp(Strings,'Charge'),1);
 [~, col_StNames] = find(strcmp(Strings,'Abbrev. Name'),1);
-rngXValues = rowLabels+1:rowProtTransloc-1;
+rngXValues       = rowLabels+1:rowProtTransloc-1;
 
 StNames = Strings(rngXValues, col_StNames);  
 StM     = Values(rngXValues, col_StM - diffColValStr);
 chrV    = Values(rngXValues, col_chrV - diffColValStr);
 eD      = Values(rngXValues, colStoStart - diffColValStr);    %Identify electron donor of the reaction
-pKa1V    = Values(rngXValues, col_Ka1 - diffColValStr); 
-pKa2V    = Values(rngXValues, col_Ka2 - diffColValStr); 
+pKa1V   = Values(rngXValues, col_Ka1 - diffColValStr); 
+pKa2V   = Values(rngXValues, col_Ka2 - diffColValStr); 
 % Substitute NaN values by 0
 ka1V(isnan(pKa1V)) = 0;
 ka2V(isnan(pKa2V)) = 0;
@@ -232,6 +243,13 @@ Reac.Pathway = Pathway;         Reac.Path = Path;       Reac.PathwayNames = Path
 Reac.NamesV  = reacHeadings;
 Reac.LabelsV = reacLabels;
 
+reacPathL1 = cell(1, length(Pathway));
+% Identify Level 1 Pathways
+for i = 1:length(Pathway)
+    reacPathL1{i} = Pathway{i}(1:end-1);
+end
+Reac.reacPathL1 = unique(reacPathL1);
+
 %Converts to 1s and 0s those reactions that have been labeled in the Excel
 %as membrane proteins
 % Reac.MemProt = strcmp(Strings(end,(Reac.id.Start+DiffStrVal:Reac.id.End+DiffStrVal)),'Y');
@@ -260,7 +278,7 @@ for i = 1:numPathways
     
     %Identify electron Carriers
     St_eC = St.StNames(strcmp(St.StType,'eC'));
-    St_eB = St.StNames(strcmp(St.StType,'eB'));
+    St_eB = St.StNames(strcmp(St.StType,'eBred'));
     %     eC_finder = zeros(length(St_eC),1);
     eB_finder = zeros(length(St_eB),1);
     %     %Find reactions with electron carrier regeneration
@@ -271,25 +289,22 @@ for i = 1:numPathways
     Param.eC_Cons   = St.StNames(strcmp(St.StType,'eCox'));
     Param.eC_Cons   = strrep(Param.eC_Cons, '+', '');
     
+   
+    %Electron bifurcation identifiers
+    Param.eB = St_eB;   
+    Param.eB_Cons = St.StNames(strcmp(St.StType,'eBox'));
     
-    %     Param.eC_Cons   = St_eC(eC_finder == 0);
-    %     Param.eCarriers = {'F420red'};
-    
-    %     Param.eCarriers = {'NADH', 'NADPH', 'UQred', 'Fdred', 'FADH2', 'F420ox'};
-    
-    %Find reactions with electron bifurcation
-    for z = 1:length(St_eB)
-        eB_finder(z) = sum(strncmp(Reac.NamesV, St_eB(z),6));
-    end
-    
-    Param.eBifurc = St_eB(eB_finder == 1);
-    
-    
+    Param.eB_eC      = St.StNames(strcmp(St.StType,'eB_eCred'));  
+    Param.eB_eC_Cons = St.StNames(strcmp(St.StType,'eB_eCox'));
+       
     %     Param.eCarriers = {'CoM_S_S_CoB', 'F420red'};
     Param.Reox_reac = strcat(Param.eCarriers, '_reox');
-    Param.eB_reac   = strcat(Param.eBifurc, '_eB');
-    Param.eB_reac = strrep(Param.eB_reac, '-', '_');
+%     Param.eB_reac   = strcat(Param.eBifurc, '_eB');
+    Param.eB      = strrep(Param.eB, '-', '_');
+    Param.eB_Cons = strrep(Param.eB_Cons, '-', '_');
     
+    Param.eB_eC      = strrep(Param.eB_eC, '-', '_');
+    Param.eB_eC_Cons = strrep(Param.eB_eC_Cons, '-', '_');  
     
     % e-Carriers reoxidations (or regeneration / moiety conservation)
     for j = 1:length(Param.eCarriers)
@@ -308,16 +323,42 @@ for i = 1:numPathways
     end
     
     id_eB_Reax = strcmp(Reac.LabelsV, 'eB');
+    Reac.id.eB_Reax = id_eB_Reax;
     
-    if any(id_eB_Reax == 1)
-        for j = 1:length(Param.eBifurc)
-            eB_Reax = strncmp(Reac.(char(Pathway(i))).Names, Param.eBifurc(j),5);
-            
-            id_eB_Reax = find(eB_Reax == 1);
-            Reac.(char(reacPath)).id.(char(Param.eB_reac(j))) = id_eB_Reax;
+    
+      if any(id_eB_Reax == 1)
+        for j = 1:length(Param.eB)
+            eB = Param.eB(j);
+            id_eB = St.id.(char(eB));
+            id_eB_stoM = Reac.(char(reacPath)).stoM_trimmed(id_eB,:);
+                               
+            id_eB_R = find(and(id_eB_Reax, id_eB_stoM));
+           
+            Reac.(char(reacPath)).id.(char(Param.eB(j))) = id_eB_R;
+        end
+        
+        %e-Carrier on eBifurc reaction
+        for j = 1:length(Param.eB_eC)
+            eB_eC = Param.eB_eC(j);
+            id_eB_eC = St.id.(char(eB_eC));
+            id_eB_eC_stoM = Reac.(char(reacPath)).stoM_trimmed(id_eB_eC,:);
+                               
+            id_eB_eC_R = find(and(id_eB_Reax, id_eB_eC_stoM));
+           
+            Reac.(char(reacPath)).id.(char(Param.eB_eC(j))) = id_eB_eC_R;
         end
     end
+
     
+%     if any(id_eB_Reax == 1)
+%         for j = 1:length(Param.eBifurc)
+%             eB_Reax = strncmp(Reac.(char(Pathway(i))).Names, Param.eBifurc(j),5);
+%             
+%             id_eB_Reax = find(eB_Reax == 1);
+%             Reac.(char(reacPath)).id.(char(Param.eB_reac(j))) = id_eB_Reax;
+%         end
+%     end
+%     
     
     
     %%    %4c. Calculates the full stoichiometry, multiplying by 0 those columns that do
@@ -327,6 +368,8 @@ for i = 1:numPathways
     
     [col_sorted, col_order]                = sort(Reac.(char(reacPath)).PathOrder);
     Reac.(char(reacPath)).stoM_ord         = Reac.(char(reacPath)).stoM_trimmed(:,col_order);
+    Reac.(char(reacPath)).Labels_ord       = Reac.(char(reacPath)).Labels(:,col_order);               %Write names of Labels for each reaction in the correct order
+
     %    not belong to the Pathway highlighted
     Reac.(char(reacPath)).stoM  = bsxfun(@times, reacM, Path(i,:)>0);
     
@@ -347,7 +390,6 @@ for i = 1:numPathways
     %     [col_sorted, col_order]                = sort(Reac.(char(reacPath)).PathOrder);
     %     Reac.(char(reacPath)).stoM_ord         = Reac.(char(reacPath)).stoM_trimmed(:,col_order);
     Reac.(char(reacPath)).Names_ord        = Reac.(char(reacPath)).Names(:,col_order);               %Write names of steps for each reaction
-    Reac.(char(reacPath)).Labels_ord       = Reac.(char(reacPath)).Labels(:,col_order);               %Write names of Labels for each reaction in the correct order
     Reac.(char(reacPath)).protTransloc_ord = Reac.(char(reacPath)).protTransloc(:,col_order);
     Reac.(char(reacPath)).n_ATP_ord        = Reac.(char(reacPath)).n_ATP(:,col_order);
     
@@ -357,10 +399,15 @@ for i = 1:numPathways
     %4e. IDENTIFY ATP AT SLP
     % Num of ATP obtained in the pathway by SLP (do only for first pathway
     % since all reactions should yield same final stoichiometry
-    if i == 1
-        Param.n_ATP_SLP = sum(Reac.(char(reacPath)).n_ATP_ord); %Num of ATP produced per SLP
-        n_H_ATP_SLP = num_H_ATP * Param.n_ATP_SLP;
-    end
+%     if i == 1
+%         Param.n_ATP_SLP = sum(Reac.(char(reacPath)).n_ATP_ord); %Num of ATP produced per SLP
+%         n_H_ATP_SLP = num_H_ATP * Param.n_ATP_SLP;
+%     end
+    
+    Reac.(char(reacPath)).n_ATP_SLP        = sum(Reac.(char(reacPath)).n_ATP_ord);
+    n_H_ATP_SLP = num_H_ATP * Reac.(char(reacPath)).n_ATP_SLP;
+    
+    
     
     %4e. Create combinations for proton translocations for each mode
     [allProtTranslocComb] = calcProtTranslocComb(Reac.(char(reacPath)).protTransloc_ord, minProtTransloc, maxProtTransloc, n_H_ATP_SLP);

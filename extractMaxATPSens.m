@@ -34,8 +34,10 @@ for m = 1:length(var2Extract)
     
     %Preallocate matrix of all results for all variables for max ATP for
     %each combination
-    plotResults = zeros(length(varValuesNames), length(reacPathway));
-
+    plotResults   = zeros(length(varValuesNames), length(reacPathway));
+    DGrResults    = zeros(length(varValuesNames), length(reacPathway));
+    plotResultsL1 = zeros(length(varValuesNames), length(Reac.reacPathL1));
+    DGrResultsL1  = zeros(length(varValuesNames), length(Reac.reacPathL1));
     
     %For each one of the variables, obtain the maximum yield of ATP for each pathway  
     for k = 1:length(varValuesNames)
@@ -61,7 +63,7 @@ for m = 1:length(var2Extract)
             if isfield(Results.(char(combNum)).(char(reacPath)), 'Compatible_Combination')
                 feasibleComb = (Results.(char(combNum)).(char(reacPath)).Compatible_Combination);     %Compatible combinations are those with positive ATP and concentrations within the range
                 feasATP_Prod =  Results.(char(combNum)).(char(reacPath)).netATP_Prod(feasibleComb);   %Collects the ATP of the feasible combinations
-                Output.DGr.(char(varValuesNames(k))) = round(Results.(char(combNum)).(char(reacPath)).DGr_FullSto(1),0); %The Gibbs energy of the reaction is obtained for the plots
+                Output.DGr.(char(varValuesNames(k)))(j) = round(Results.(char(combNum)).(char(reacPath)).DGr_FullSto(1),0); %The Gibbs energy of the reaction is obtained for the plots
 
                 %If ATP >= 0 exist, collect the maximum ATP obtained in the
                 %given pathway for the given combination. If there are ATPs
@@ -75,12 +77,13 @@ for m = 1:length(var2Extract)
             %Define also as -10 if there are no compatible combinations    
             else
                 Output.Results.(char(varValuesNames(k))).max_ATP(j) =  -10;
+                Output.DGr.(char(varValuesNames(k)))(j) = round(Results.(char(combNum)).(char(reacPath)).DGr_FullSto(1),0); %The Gibbs energy of the reaction is obtained for the plots
             end          
         end
    
         %Register results as matrices for bar plots        
         plotResults(k,:) = Output.Results.(char(varValuesNames(k))).max_ATP;
-            
+        DGrResults(k,:)  = Output.DGr.(char(varValuesNames(k)));    
     end 
         
         %Register maximum value of ATP
@@ -88,14 +91,27 @@ for m = 1:length(var2Extract)
         %The vector of results for the variable is stored under the Output structure
         Output.plotResults.(char(varResults)) = plotResults;
         maxATP_prev = maxATP;
+ 
+        %Obtain Maximum value of ATP for Pathways of Level 1: P1, P2, P3...
+        for nP = 1:length(Reac.reacPathL1)
+            pathName = Reac.reacPathL1{nP};
+            idPathL1 = strncmp(Reac.Pathway, pathName,2)';
+            plotResultsL1(:,nP) = max(plotResults(:,idPathL1),[],2);
+            DGrResultsL1(:,nP)  = max(DGrResults(:,idPathL1),[],2); 
+        end
+        Output.plotResultsL1.(char(varResults)) = plotResultsL1;
+        Output.DGrResultsL1.(char(varResults))  = DGrResultsL1;
+
 end
+
+
 
 %Extract also the maximum value of the Gibbs free energies (To be
 %recalculated earlier)
 varDG = fieldnames(Output.DGr);
 DGrVarV = zeros(length(varDG),1);
 for i = 1:length(varDG)
-    DGrVarV(i) = Output.DGr.(char(varDG(i)));
+    DGrVarV(i) = min(Output.DGr.(char(varDG(i))));
 end
 
 %Store in the Outputs, maximum energy recovered as ATP and the maximum

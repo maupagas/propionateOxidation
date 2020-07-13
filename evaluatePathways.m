@@ -14,17 +14,21 @@
 %% DEFINE PATHWAYS TO EVALUATE
 % 
 %Number of reactions to evaluate (To evaluate so far only the P1's (Reactions that do not contain any loop)
-% firstPath  = 'P1a';
-% lastPath   = 'P1b';
+% firstPath  = 'P7a';
+% lastPath   = 'P7b';
 firstPath  = Reac.Pathway(1);
 lastPath   = Reac.Pathway(end);
 Param.firstPath2Eval = find(strcmp(char(firstPath), Reac.Pathway));
 Param.lastPath2Eval  = find(strcmp(char(lastPath),  Reac.Pathway));
 loopFlag = 0;       % Flag not to allow concentrations to go over the maximum limit (Only used in loop calculations)
 
+% Save Results
+printDateName = datestr(now,'yymmdd');
+saveFileName = strcat(printDateName, '_PathEval.mat');
+
 %pKa's (to: 1) be adjusted with temperature 2) Read directly from Excel) 
 pKa_CO2 = St.pKa1V(St.id.CO2);          pKa_HCO3 = St.pKa1V(St.id.CO2);
-pka_Bu  = St.pKa1V(St.id.Bu_out);       pka_Ac   = St.pKa1V(St.id.Ac_out);
+pKa_Pro  = St.pKa1V(St.id.Pro_out);       pka_Ac   = St.pKa1V(St.id.Ac_out);
 
 %% DEFINE DIFFERENT SCENARIOS TO EVALUATE THE PATHWAYS %%%%%%%%%%%%
 
@@ -49,13 +53,41 @@ switch combinationAnalysis
     case 'H2Range'
 
         %Define range of hydrogen concentrations
-        H2_Range = [1.00E-10
-                    1.00E-09
-                    1.28E-08];
-                
+ 
+        H2_Range = [1.00E-09
+                    1.50E-09
+                    2.50E-09
+                    3.00E-09
+                    3.50E-09
+                    5.00E-09
+                    8.50E-09
+                    9.25E-09
+                    1.00E-08
+                    1.20E-08
+                    1.30E-08
+                    1.35E-08
+                    1.50E-08
+                    1.60E-08
+                    1.86E-08
+                    1.99E-08
+                    2.12E-08
+                    3.15E-08
+                    4.69E-08
+                    9.38E-08
+                    2.96E-07
+                    1.00E-07
+                    2.40714E-07
+                    5.22143E-07
+                    1.00E-06];
+                   
+        % Keep the default value for the rest of combination values
+        for nC = 1:length(combNames)
+            Combination.(char(combNames(nC))) = Param.refComb(nC);
+        end
+        
         %Overwrite Hydrogen Concentrations
-        Combination.H2           = H2_Range;				
-
+        Combination.H2           = H2_Range;	
+        
         %Calculate the "Sensitivity"Matrix
         [combValues] = calcPivotSensMatrix(Combination, Param.refComb, combNames);
         
@@ -77,11 +109,13 @@ St.combinationList      = combValues;
 St.combinationListNames = combNames;
 
 %Store concentration total of inputs, and pKa
-Bu_Ka = 10^-(St.pKa1V(St.id.Bu_out));
+% Bu_Ka = 10^-(St.pKa1V(St.id.Bu_out));
 Ac_Ka = 10^-(St.pKa1V(St.id.Ac_out));
+Pro_Ka = 10^-(St.pKa1V(St.id.Pro_out));
 
-concBuT = St.StM(St.id.Bu_out) * (1 + St.StM(St.id.Hout) / Bu_Ka);
-concAcT = St.StM(St.id.Ac_out) * (1 + St.StM(St.id.Hout) / Ac_Ka);
+% concBuT  = St.StM(St.id.Bu_out)  * (1 + St.StM(St.id.Hout) / Bu_Ka);
+concAcT  = St.StM(St.id.Ac_out)  * (1 + St.StM(St.id.Hout) / Ac_Ka);
+concProT = St.StM(St.id.Pro_out) * (1 + St.StM(St.id.Hout) / Pro_Ka);
 
 %Store list of Combination names
 for k = 1:length(St.combinationList(:,1)), St.combinationNames{k} = sprintf('%s_%d','Combination',k); end
@@ -110,6 +144,7 @@ for m = 1:length(combValues(:,1))
     
     sprintf('Calculating combination %d out of %d...', m, length(combValues(:,1)))
     
+    combName = combinationListNames(m);
     %*************************************************************************
     %UPDATE COMBINATION VALUES: THIS HAS TO BE DEFINED BY HAND
     Param.DG_ATP = combValues(m, id_DGATP);          concH2  = combValues(m, id_H2);      
@@ -167,18 +202,21 @@ for m = 1:length(combValues(:,1))
     %Calculate electron carrier concentrations and trim it for the feasible
     %reactions
     [ratio_eCM, eC_RatioNames, protTranslocFeasComb, Res_eC_Conc, eCFeas_Conc, eC_ConcTable] = calcFeas_eC(Param, St, Reac);
+    [DGr_FullStoV] = calcEnergetics(St.StM, Param, Reac.FullStoM,  0, 0);
 
     for nPath = Param.firstPath2Eval:Param.lastPath2Eval
         reacPath = Reac.Pathway(nPath);
-        Results.(char(combinationListNames(m))).(char(reacPath)).ProtTranslocComb = protTranslocFeasComb.(char(reacPath));
-        Results.(char(combinationListNames(m))).(char(reacPath)).eC_ratios        = ratio_eCM.(char(reacPath));
-        Results.(char(combinationListNames(m))).(char(reacPath)).eC_Conc          = eCFeas_Conc.(char(reacPath));
-        Results.(char(combinationListNames(m))).(char(reacPath)).eC_ReoxNames     = eC_RatioNames.(char(reacPath));
-        Results.(char(combinationListNames(m))).(char(reacPath)).eC_ConcTable     = eC_ConcTable.(char(reacPath));
+        Results.(char(combName)).(char(reacPath)).ProtTranslocComb = protTranslocFeasComb.(char(reacPath));
+        Results.(char(combName)).(char(reacPath)).eC_ratios        = ratio_eCM.(char(reacPath));
+        Results.(char(combName)).(char(reacPath)).eC_Conc          = eCFeas_Conc.(char(reacPath));
+        Results.(char(combName)).(char(reacPath)).eC_ReoxNames     = eC_RatioNames.(char(reacPath));
+        Results.(char(combName)).(char(reacPath)).eC_ConcTable     = eC_ConcTable.(char(reacPath));
+        Results.(char(combName)).(char(reacPath)).DGr_FullSto      = DGr_FullStoV(nPath);
     end
     %Calculate DGr from excel for future calculations
-    [DGr_FullSto] = calcEnergetics(St.StM, Param, Reac.stoM_xlsx,  0, 0);
-      
+%     [DGr_FullSto] = calcEnergetics(St.StM, Param, Reac.stoM_xlsx,  0, 0);
+%     [DGr_FullSto] = calcEnergetics(St.StM, Param, Reac.FullStoM,  0, 0);
+  
     %*******************************************************************************
 
     %Evaluates each one of the Pathway (THIS IS THE MAIN FOR LOOP FOR EACH
@@ -202,11 +240,17 @@ for m = 1:length(combValues(:,1))
         posConcV   = Reac.(char(reacPath)).posConcV;
         
         %STORE ALL INPUT RESULTS: INPUTS, DGr, dp, DGProt
-        Results.(char(combinationListNames(m))).(char(reacPath)).Inputs      = repmat(combValues(m,:), length(protTranslocFeasComb.(char(reacPath))), 1);
-        Results.(char(combinationListNames(m))).(char(reacPath)).dp          = repmat(Param.dp,        length(protTranslocFeasComb.(char(reacPath))), 1);
-        Results.(char(combinationListNames(m))).(char(reacPath)).DG_Prot     = repmat(Param.DG_Prot,   length(protTranslocFeasComb.(char(reacPath))), 1);
-        Results.(char(combinationListNames(m))).(char(reacPath)).DGr_FullSto = repmat(DGr_FullSto,     length(protTranslocFeasComb.(char(reacPath))), 1);
-
+        if isempty(protTranslocFeasComb.(char(reacPath))) 
+            Results.(char(combName)).(char(reacPath)).Inputs      = combValues(m,:);
+            Results.(char(combName)).(char(reacPath)).dp          = Param.dp;
+            Results.(char(combName)).(char(reacPath)).DG_Prot     = Param.DG_Prot;
+            Results.(char(combName)).(char(reacPath)).DGr_FullSto = DGr_FullStoV(k);
+        else    
+            Results.(char(combName)).(char(reacPath)).Inputs      = repmat(combValues(m,:), length(protTranslocFeasComb.(char(reacPath))), 1);
+            Results.(char(combName)).(char(reacPath)).dp          = repmat(Param.dp,        length(protTranslocFeasComb.(char(reacPath))), 1);
+            Results.(char(combName)).(char(reacPath)).DG_Prot     = repmat(Param.DG_Prot,   length(protTranslocFeasComb.(char(reacPath))), 1);
+            Results.(char(combName)).(char(reacPath)).DGr_FullSto = repmat(DGr_FullStoV(k), length(protTranslocFeasComb.(char(reacPath))), 1);
+        end
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
        
         %Preallocate sizes
@@ -228,7 +272,7 @@ for m = 1:length(combValues(:,1))
         if numLoops > 0
             startLoop = idLoop.(char(reacPath)).(char(loopNameInit)).Start;
             endLoop   = idLoop.(char(reacPath)).(char(loopNameInit)).End;
-                                    %Pass up the information required for the loop
+            %Pass up the information required for the loop
             LoopData = idLoop.(char(reacPath)).(char(loopNameInit));                      
         else
             startLoop = 0;
@@ -390,7 +434,12 @@ for m = 1:length(combValues(:,1))
                         else                 
                             %Solve Loop
                             protTranslocLoopV = protTranslocFeasComb.(char(reacPath))(j, startLoop:endLoop);
-                            [ConcV, LoopResults, solutionFlag] = solveLoop(StM, Param, LoopData, protTranslocLoopV, j);
+                            
+                            if isempty(LoopData.id_Cn)
+                                [ConcV, LoopResults, solutionFlag] = solveBranched(StM, Param, LoopData, protTranslocLoopV, j);
+                            else
+                                [ConcV, LoopResults, solutionFlag] = solveLoop(StM, Param, LoopData, protTranslocLoopV, j);
+                            end
                             
                             %Store Results into structures
                             ConcResM(:, counterRc:endLoop)   = LoopResults.ConcV;
@@ -504,11 +553,11 @@ for m = 1:length(combValues(:,1))
         end
 
            %Store all results in Structure
-            Results.(char(combinationListNames(m))).(char(reacPath)).ConcV     = ConcResM;
-            Results.(char(combinationListNames(m))).(char(reacPath)).Prod_Conc = Prod_ConcM; 
-            Results.(char(combinationListNames(m))).(char(reacPath)).Pos_Conc  = Pos_ConcV;
-            Results.(char(combinationListNames(m))).(char(reacPath)).DGrV      = DGrM;
-            Results.(char(combinationListNames(m))).(char(reacPath)).OptimConc = OptimConc;   % NEED TO PREALLOCATE THIS VARIABLE
+            Results.(char(combName)).(char(reacPath)).ConcV     = ConcResM;
+            Results.(char(combName)).(char(reacPath)).Prod_Conc = Prod_ConcM; 
+            Results.(char(combName)).(char(reacPath)).Pos_Conc  = Pos_ConcV;
+            Results.(char(combName)).(char(reacPath)).DGrV      = DGrM;
+            Results.(char(combName)).(char(reacPath)).OptimConc = OptimConc;   % NEED TO PREALLOCATE THIS VARIABLE
 
 
     end
@@ -520,56 +569,56 @@ for m = 1:length(combValues(:,1))
         if ~isempty(protTranslocFeasComb.(char(reacPath)))
             %If reaction is bigger or lower than Max concentration, is labeled as
             %1, if it is not, is labeled as 0
-            Results.(char(combinationListNames(m))).(char(reacPath)).ConcCheckM = and(or(Results.(char(combinationListNames(m))).(char(reacPath)).OptimConc(1:St.id.H2-1,:) > Param.Max_Conc, ...
-                                                                                         Results.(char(combinationListNames(m))).(char(reacPath)).OptimConc(1:St.id.H2-1,:) < Param.Min_Conc), ...
-                                                                                         Results.(char(combinationListNames(m))).(char(reacPath)).OptimConc(1:St.id.H2-1,:)    ~= 1);
+            Results.(char(combName)).(char(reacPath)).ConcCheckM = and(or(Results.(char(combName)).(char(reacPath)).OptimConc(1:St.id.H2-1,:) > Param.Max_Conc, ...
+                                                                                         Results.(char(combName)).(char(reacPath)).OptimConc(1:St.id.H2-1,:) < Param.Min_Conc), ...
+                                                                                         Results.(char(combName)).(char(reacPath)).OptimConc(1:St.id.H2-1,:)    ~= 1);
 
-            Results.(char(combinationListNames(m))).(char(reacPath)).DGCheckM = Results.(char(combinationListNames(m))).(char(reacPath)).DGrV <= 1e-6;
+            Results.(char(combName)).(char(reacPath)).DGCheckM = Results.(char(combName)).(char(reacPath)).DGrV <= 1e-6;
 
             %For having all concentration within the required range, all the values
             %for each COLUMN in the checking matrix have to be 0 ( BETTER TO USE AN ANY)
-            Results.(char(combinationListNames(m))).(char(reacPath)).Compatible_Conc = all(Results.(char(combinationListNames(m))).(char(reacPath)).ConcCheckM == 0);
+            Results.(char(combName)).(char(reacPath)).Compatible_Conc = all(Results.(char(combName)).(char(reacPath)).ConcCheckM == 0);
             %For having all reactions under a negative DG, all the values for each ROW in the checking matrix have to be 1
-            Results.(char(combinationListNames(m))).(char(reacPath)).Compatible_DG   = all(Results.(char(combinationListNames(m))).(char(reacPath)).DGCheckM' == 1);
+            Results.(char(combName)).(char(reacPath)).Compatible_DG   = all(Results.(char(combName)).(char(reacPath)).DGCheckM' == 1);
             %Checks reactions that are compatible in both Concentrations and Gibbs Free Energy
-            Results.(char(combinationListNames(m))).(char(reacPath)).Compatible_Combination = and(Results.(char(combinationListNames(m))).(char(reacPath)).Compatible_Conc == 1, Results.(char(combinationListNames(m))).(char(reacPath)).Compatible_DG == 1);
+            Results.(char(combName)).(char(reacPath)).Compatible_Combination = and(Results.(char(combName)).(char(reacPath)).Compatible_Conc == 1, Results.(char(combName)).(char(reacPath)).Compatible_DG == 1);
             %Finds the reaction that satisfies both compatibilities and returns a message
-            Results.(char(combinationListNames(m))).(char(reacPath)).CompCombId = find(Results.(char(combinationListNames(m))).(char(reacPath)).Compatible_Combination == 1);
+            Results.(char(combName)).(char(reacPath)).CompCombId = find(Results.(char(combName)).(char(reacPath)).Compatible_Combination == 1);
 
             %Group results for group of net H translocation
-       %     numNetHTransloc = Reac.ProtTranslocComb.(char(reacPath))(Results.(char(combinationListNames(m))).CompCombId.(char(reacPath))) + Param.num_H_ATP;
+       %     numNetHTransloc = Reac.ProtTranslocComb.(char(reacPath))(Results.(char(combName)).CompCombId.(char(reacPath))) + Param.num_H_ATP;
 
-            netHTranslocation    = sum(protTranslocFeasComb.(char(reacPath)), 2) + Param.n_ATP_SLP * Param.n_H_ATP;
+            netHTranslocation    = sum(protTranslocFeasComb.(char(reacPath)), 2) + Reac.(char(reacPath)).n_ATP_SLP * Param.n_H_ATP;
             netATP_Prod = netHTranslocation / Param.n_H_ATP;
             netDG_Prod  = netHTranslocation * Param.DG_Prot;
-            numValidNetHTransloc = netHTranslocation(Results.(char(combinationListNames(m))).(char(reacPath)).CompCombId);
+            numValidNetHTransloc = netHTranslocation(Results.(char(combName)).(char(reacPath)).CompCombId);
 
             
-            for w = min(numValidNetHTransloc):max(numValidNetHTransloc)
-
-                %Name the character
-        %         HTranslocName = sprintf('NetHTransloc_%s',num2str(w));
-        %         HTranslocName = strrep(HTranslocName,'-','_');
-                id_NetH = find(Param.netHTranslocRange == round(w,2));
-                netHTranslocName = Param.netHTranslocNames(id_NetH);
-
-                %Valid results combination
-                validResults = Results.(char(combinationListNames(m))).(char(reacPath)).CompCombId;
-                %Group results for each netproton translocation
-                Results.(char(netHTranslocName)).(char(reacPath)).(char(combinationListNames(m))) =  validResults(round(numValidNetHTransloc,2) == round(w,2));
-
-            end
+%             for w = min(numValidNetHTransloc):max(numValidNetHTransloc)
+% 
+%                 %Name the character
+%         %         HTranslocName = sprintf('NetHTransloc_%s',num2str(w));
+%         %         HTranslocName = strrep(HTranslocName,'-','_');
+%                 id_NetH = find(Param.netHTranslocRange == round(w,2));
+%                 netHTranslocName = Param.netHTranslocNames(id_NetH);
+% 
+%                 %Valid results combination
+%                 validResults = Results.(char(combName)).(char(reacPath)).CompCombId;
+%                 %Group results for each netproton translocation
+%                 Results.(char(netHTranslocName)).(char(reacPath)).(char(combName)) =  validResults(round(numValidNetHTransloc,2) == round(w,2));
+% 
+%             end
             
         else        
             netHTranslocation    = [];
             netATP_Prod = [];
             netDG_Prod  = [];
-           
+            Results.(char(combName)).(char(reacPath)).CompCombId = [];
         end
         
-            Results.(char(combinationListNames(m))).(char(reacPath)).netHTransloc = netHTranslocation;
-            Results.(char(combinationListNames(m))).(char(reacPath)).netATP_Prod  = netATP_Prod;
-            Results.(char(combinationListNames(m))).(char(reacPath)).netDG_Prod   = netDG_Prod;
+            Results.(char(combName)).(char(reacPath)).netHTransloc = netHTranslocation;
+            Results.(char(combName)).(char(reacPath)).netATP_Prod  = netATP_Prod;
+            Results.(char(combName)).(char(reacPath)).netDG_Prod   = netDG_Prod;
     %     
     %     if sum(Compatible_Conc > 0),
     %         sprintf('The concentrations combination of %d is compatible with the cell requirements for Mode %s', Compatible_Conc, char(Reac.Pathway(i)))
@@ -583,4 +632,6 @@ end
 %Collect ONLY the results for the combinations that are feasible
 [PrintResults] = printFeasibleResults(Results, Reac, Param, combinationListNames);
   
-clearvars -except Reac Param idLoop St Results PrintResults Combination
+clearvars -except Reac Param idLoop St Results PrintResults Combination saveFileName combinationListNames
+
+save(saveFileName)

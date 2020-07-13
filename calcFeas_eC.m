@@ -26,7 +26,7 @@ eC_ProtTranslocTabV   = NADH_ProtTranslocTabV;
 
 for id_pathway = Param.firstPath2Eval:Param.lastPath2Eval
     reacPath = Reac.Pathway(id_pathway);
-    
+    Labels_ord = Reac.(char(reacPath)).Labels_ord;
     %Tabulate values that reoxidate directly to hydrogen
     for i = 1:length(Param.eCarriers)
         eCarrier = Param.eCarriers(i);
@@ -45,7 +45,9 @@ for id_pathway = Param.firstPath2Eval:Param.lastPath2Eval
             stoM_ord = Reac.(char(reacPath)).stoM_ord;
             stoV     = stoM_ord(:,id_eC_Reac);
             
-            if (strcmp(eCarrier,'NADH') || strcmp(eCarrier,'NADPH') || strcmp(eCarrier,'Fdred') || strcmp(eCarrier,'F420red'))
+            %If the electron carriers are swapped with NADH
+            if strcmp(Labels_ord(id_eC_Reac),'eC')  
+%             if (strcmp(eCarrier,'NADH') || strcmp(eCarrier,'NADPH') || strcmp(eCarrier,'Fdred') || strcmp(eCarrier,'F420red'))
 
                 for j = 1:length(NADH_ProtTranslocTabV)
                     H_out = NADH_ProtTranslocTabV(j);
@@ -84,7 +86,9 @@ for id_pathway = Param.firstPath2Eval:Param.lastPath2Eval
             stoV     = stoM_ord(:,id_eC_Reac);
         
             %FADH2 and UQred are reoxidised to NADH
-            if strcmp(eCarrier, 'FADH2') || strcmp(eCarrier, 'UQred')
+            %If the electron carriers are swapped with NADH
+            if strcmp(Labels_ord(id_eC_Reac),'eCS')  
+%             if strcmp(eCarrier, 'FADH2') || strcmp(eCarrier, 'UQred')
                 
                 %Preallocate results of concentration of electron carrier
                 eC_ConcTab = zeros(length(eC_ProtTranslocTabV), length(NADH_ProtTranslocTabV));
@@ -103,8 +107,10 @@ for id_pathway = Param.firstPath2Eval:Param.lastPath2Eval
                         
                     end
                 end
-                
-            elseif strcmp(eCarrier, 'NADH') || strcmp(eCarrier, 'Fdred')
+           
+                %If the electron carrier goes directly to hydrogem 
+           elseif strcmp(Labels_ord(id_eC_Reac),'eC')
+%             elseif strcmp(eCarrier, 'NADH') || strcmp(eCarrier, 'Fdred')
                 eC_ConcTab = eC_ConcTable.(char(reacPath)).(char(eCarrier));                
             end
         else
@@ -125,6 +131,8 @@ end
 % translocated protons configuration (each row) for every pathway
 for id_pathway = Param.firstPath2Eval:Param.lastPath2Eval
     reacPath = Reac.Pathway(id_pathway);
+    Labels_ord = Reac.(char(reacPath)).Labels_ord;
+
     %     %Calculates total of proton translocated for the pathway
     %     num_ProtTransloc = length(protTranslocComb.(char(reacPath))(:,1));
     %     %Passes up matrix of proton translocation from structure to variable
@@ -141,8 +149,7 @@ for id_pathway = Param.firstPath2Eval:Param.lastPath2Eval
     for num_eC = 1:num_eCarriers
         eCarrier = Param.eCarriers(num_eC);
         
-        %Identify if the electron carrier is FADH2 or Ubiquinone (for later
-        %use)
+        %Identify if the electron carrier is FADH2 or Ubiquinone (for later use)
         id_FADH2 = strcmp(eCarrier,'FADH2');
         id_UQred = strcmp(eCarrier,'UQred');
         %Recalls the tabulated values for the electron carrier (Done in
@@ -207,7 +214,9 @@ for id_pathway = Param.firstPath2Eval:Param.lastPath2Eval
             
             %If carrier is FADH2 or UQred, they depend on the concentration of
             %NADH.....
-            if (id_FADH2 || id_UQred)
+%             if (id_FADH2 || id_UQred)
+                
+            if strcmp(Labels_ord(id_eC_reox),'eCS') 
                 protTransloc_NADHV    = protTranslocM(:, id_NADH_reox);
                 %For each value of the protons translocated and the
                 %"translocated state of NADH", use the required concentrations

@@ -7,11 +7,11 @@
 %%%%%%%%%% EDITING OF FILE STARTS HERE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %Define Excel file to print and its path
-xlsxFile ='ButyrateResults.xlsx';
+xlsxFile ='PropionateResults.xlsx';
 file = strcat(pwd, '\', xlsxFile);
 
-printType = 'all';   %choose between 'all' or 'final'
-printCombName = 'Combination_18';  %Select Combination List Name
+printType = 'final';   %choose between 'all' or 'final'
+printCombName = 'Combination_22';  %Select Combination List Name
 
 %%%%%%%%%% EDITING OF FILE ENDS HERE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -178,4 +178,4 @@ Excel.delete
 clear Excel
 
 %Clears all the variables except the interested ones
-clearvars -except Reac Param idLoop St Results PrintResults
+clearvars -except Reac Param idLoop St Results PrintResults Combination

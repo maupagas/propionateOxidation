@@ -31,3 +31,9 @@ else
     ui_eC_red = -(sum(u_i_non_eC .* stoV_non_eC) - H_out * DG_Prot)/stoV(id_eC);    
     conc_eC_red = exp((ui_eC_red  -  DG0ft(id_eC) - chrV(id_eC)  * F .* EV(id_eC)) / (Rth * T));
 end
+
+
+% prodStoich = stoV(varConcV==1) ;        % Check which one of the two is faster
+%     prodConc = exp(((-sum_u_i - DG0ft(varConcV) - chrV(varConcV)  * F .* EV(varConcV)) / (Rth * T )));
+%Calculates the Product concentration for a DG = 0
+

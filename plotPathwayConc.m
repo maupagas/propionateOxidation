@@ -78,8 +78,9 @@ ResultsToSort = [Inputs_RefVals, ConcM_RefVals, eC_Ratios_RefVals, protTranslocC
 %% Sort Results
 sorting = 'refVals';
 
+colATP = length(ResultsToSort(1,:));
 if strcmp(sorting, 'refVals')   
-        sortedResults      = sortrows(ResultsToSort, colSort, 'ascend');
+        sortedResults      = sortrows(ResultsToSort, [colSort colATP], 'descend');
         %Trim sortedResults into their own variables
         InputsSorted       = sortedResults(:,1:length_Inputs);
         ConcM_Sorted       = sortedResults(:,length_Inputs+1:length_Inputs+length_ConcM);
@@ -93,6 +94,9 @@ end
 valsSorted = unique(InputsSorted(:,colSort));
 % valsH2 = sort(valsH2, 'descend');
 idValsSorted = zeros(length(valsSorted),1);
+
+%Sort values and take the first value (Remember that the values need to be
+%sorted by ATP in each variable)
 for k = 1:length(valsSorted)
     idValsSorted(k) = find(InputsSorted(:,colSort) == valsSorted(k), 1);
 end
@@ -152,11 +156,12 @@ ratio_H_ATP   = refPoint(1,r_H_ATP_pos);
 protTranslocV = protTranslocV(:, 1:length(reacNames));
 n_ATPV        = n_ATPV(1:length(reacNames));
 
-if ~isempty(Param.eB_reac)
-    eB_carrier    = 'CoB-SH';  %Select between 'CoB-SH' or 'Fdred'
-else 
+% if ~isempty(Param.eB_reac)
+%     eB_carrier    = 'CoB-SH';  %Select between 'CoB-SH' or 'Fdred'
+% else 
+%     eB_carrier = '';
+% end
     eB_carrier = '';
-end
 
 %Collect  Names for XTicks
 if numLoops > 0 

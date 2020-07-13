@@ -4,9 +4,30 @@
 function [adjustedStoich] = recalcStoich(Reac, St, pathway, Param)
 
 %Pass up values initially
-stoM_ord       = Reac.(char(pathway)).stoM_ord;
-% reacID_pathway = Reac.(char(pathway)).id;
-eCReacID       = Reac.(char(pathway)).id;
+stoM_ord   = Reac.(char(pathway)).stoM_ord;
+eCReacID   = Reac.(char(pathway)).id;
+Labels_ord = Reac.(char(pathway)).Labels_ord;
+%% Recalculate total products being transported
+%Recalculate Final Product Reaction
+idTr = find(strcmp(Reac.(char(pathway)).Labels_ord, 'Fp'));
+TrR  = stoM_ord(:,idTr);
+
+%Auxiliary multiplicative vector
+auxV = 0*TrR;
+auxV(1:St.id.H2-1) = 1;
+
+%Substrate identifier
+idSub = find(double(TrR < 0) .* auxV);
+
+% Find the final stoichiometry that needs to be transported outside the
+% cell 
+%(IN THE EXCEL THE TRANSPORT REACTION NEEDS TO BE INITIALLY SET AT 1:1 STOICHIOMETRY 
+% TO BE ABLE TO APPLY CORRECTLY THE MULTIPLIER!
+stoTrVal = sum(stoM_ord(idSub,1:idTr-1));
+stoM_ord(:,idTr) = TrR * stoTrVal;
+
+
+%% Recalculate e-Carriers Stoichiometry
 
 %Order should be inverted, so NADH is calculated the last one (Remember
 %some eC reoxidize by oxidizing NAD+)
@@ -14,7 +35,7 @@ eCarriers   = flipud(Param.eCarriers);
 reoxNames   = flipud(Param.Reox_reac);
 eC_OxList   = flipud(Param.eC_Cons);
 
-%Evaluate 
+% Recalculate electron carriers
 for i = 1:length(eCarriers)
     
     eC_red = eCarriers(i);            eC_ox = eC_OxList(i);
@@ -24,7 +45,7 @@ for i = 1:length(eCarriers)
     %Identifies both eCarriers pairs (reduced and oxidised form)
     id_eC_red = St.id.(char(eC_red));  id_eC_ox = St.id.(char(eC_ox));
     
-    if idReac == -1,        
+    if idReac == -1        
         continue
     else
          %eC need to be regenerated in the stoichiometry to ensure the
@@ -32,16 +53,16 @@ for i = 1:length(eCarriers)
         eC_ox_sto  = -sum(stoM_ord(id_eC_ox, 1:idReac-1), 2);
         eC_red_sto = -sum(stoM_ord(id_eC_red,     1:idReac-1), 2);
 
-        stoM_ord(id_eC_ox, idReac)      = eC_ox_sto;
-        stoM_ord(id_eC_red,     idReac) = eC_red_sto;
+        stoM_ord(id_eC_ox,  idReac) = eC_ox_sto;
+        stoM_ord(id_eC_red, idReac) = eC_red_sto;
         
-         %eC is reoxidized directly to H2
-        if (strcmp(eC_red,'FADH2') || strcmp(eC_red,'UQred')),  
-           
+        %If the reaction has a swap with NADH (eCS), adjust stoichiometry to NADH
+        if strcmp(Labels_ord(idReac),'eCS')          
+%         if strcmp(eC_red,'FADH2')          
             stoM_ord(St.id.NAD,  idReac) = eC_red_sto;
             stoM_ord(St.id.NADH, idReac) = eC_ox_sto;
 
-        else   %eC is reoxidized directly to H2 (stoichiometry of the oxidised form is always paired with hydrogen)
+        else   %If Label is eC, then the reozidation is directly to H2 (stoichiometry of the oxidised form is always paired with hydrogen)
             stoM_ord(St.id.H2,   idReac) = eC_ox_sto;     
         end
     end

@@ -1,9 +1,9 @@
 %Script to write the values of the DG of the reactions and the activities
 %required to find the optimum to run the reactions forward (if possible)
-xlsxFile ='ButyrateResults2.xlsx';
+xlsxFile ='PropionateResults.xlsx';
 file = strcat(pwd, '\', xlsxFile);
-headNameSheet = 'P4a';
-targetPath = 'P4a';
+headNameSheet = 'P7a';
+targetPath = 'P7a';
 lastpathway2Print = find(strcmp(char(targetPath), Reac.Pathway));
 
 %Activates Excel server (I needed to add the file location with its full path)
